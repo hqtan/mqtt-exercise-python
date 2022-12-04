@@ -1,3 +1,4 @@
+import datetime as dt
 from dotenv import load_dotenv
 import json
 from os import getenv
@@ -7,7 +8,7 @@ from stats_pubsub import publish_stats
 
 load_dotenv()
 
-TOPIC = getenv("TOPIC") or ""
+TOPIC = getenv("TOPIC") or "DATA"
 STATS_TOPIC = getenv("STATS_TOPIC") or "STATS"
 
 mqttBroker = getenv("BROKER") or "localhost"
@@ -22,7 +23,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, message) -> None:
 		mssg: str = str(message.payload.decode("utf-8"))
 		print(f'received message: {mssg}, values {get_values_from_message(mssg)}')
-		delete_old_messages()
+		delete_old_messages(int(dt.datetime.now().strftime('%s')), 35)
 		insert_message(get_values_from_message(mssg))
 		stats :list = list(get_averages())
 		avg_1min, avg_5min, avg_15min = stats[0]

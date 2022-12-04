@@ -1,3 +1,4 @@
+from contextlib import closing
 import datetime as dt
 import functools
 import sqlite3
@@ -22,17 +23,10 @@ def setup_db() -> None:
     """ create tables in the database """
     conn: Optional[sqlite3.Connection] = create_connection()
     if conn is not None:
-        c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS messages (number INTEGER, epochtime INTEGER)''')
-        conn.commit()
-
-def run_db_operation(sql: str, values: tuple) -> None:
-    """ run a database operation """
-    conn: Optional[sqlite3.Connection] = create_connection()
-    if conn is not None:
-        c = conn.cursor()
-        c.execute(sql, values)
-        conn.commit()
+        with closing(conn) as con:
+            with closing(con.cursor()) as cur:
+                cur.execute('''CREATE TABLE IF NOT EXISTS messages (number INTEGER, epochtime INTEGER)''')
+                con.commit()
 
 def run_db_operation_decorator(func):
     @functools.wraps(func)
@@ -42,9 +36,10 @@ def run_db_operation_decorator(func):
         sql, values = func(*args, **kwargs)
         # Do something after
         if conn is not None:
-            c = conn.cursor()
-            c.execute(sql, values)
-            conn.commit()
+            with closing(conn) as con:
+                with closing(con.cursor()) as cur:
+                    cur.execute(sql, values)
+                    con.commit()
         return None
     return wrapper_decorator
 
@@ -61,9 +56,10 @@ def run_db_query_decorator(func):
         sql = func(*args, **kwargs)
         results = []
         if conn is not None:
-            c = conn.cursor()
-            c.execute(sql)
-            results = c.fetchall()
+            with closing(conn) as con:
+                with closing(con.cursor()) as cur:
+                    cur.execute(sql)
+                    results = cur.fetchall()
         return results
     return wrapper_decorator
 
@@ -97,7 +93,7 @@ def get_averages() -> str:
     return sql
 
 @run_db_operation_decorator
-def delete_old_messages(current_epoch: int = int(dt.datetime.now().strftime('%s')), expire_in_minutes: int = 45) -> tuple[str, tuple[int, int]]:
+def delete_old_messages(current_epoch: int = int(dt.datetime.now().strftime('%s')), expire_in_minutes: int = 35) -> tuple[str, tuple[int, int]]:
     sql = '''DELETE FROM messages WHERE ? - epochtime > 60*?'''
     return (sql, (current_epoch, expire_in_minutes))
 
@@ -109,4 +105,5 @@ if __name__ == "__main__":
     def query_db() -> str:
         return f"SELECT * FROM messages"
 
+    # delete_old_messages()
     print(query_db())

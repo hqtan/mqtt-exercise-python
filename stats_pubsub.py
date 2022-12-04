@@ -2,14 +2,12 @@ from dotenv import load_dotenv
 import json
 from os import getenv
 import paho.mqtt.client as mqtt
-import time
 from tabulate import tabulate
 
 load_dotenv()
 
 STATS_TOPIC = getenv("STATS_TOPIC") or "STATS"
 
-# mqttBroker ="mqtt.eclipseprojects.io"
 mqttBroker = getenv("BROKER") or "localhost"
 
 def on_connect(client, userdata, flags, rc):

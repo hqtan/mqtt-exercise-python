@@ -7,7 +7,7 @@ import json
 
 load_dotenv()
 
-TOPIC = getenv("TOPIC") or ""
+TOPIC = getenv("TOPIC") or "DATA"
 mqttBroker = getenv("BROKER") or "localhost"
 
 def on_connect(client, userdata, flags, rc):
