@@ -1,0 +1,40 @@
+services:
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto
+    command: mosquitto -c /mosquitto-no-auth.conf
+    ports:
+      - "1883:1883"
+    # logging:
+    #   driver: none
+
+  subscriber:
+    build: .
+    container_name: subscriber
+    command: ./venv/bin/python -u subscribe.py
+    volumes:
+      - ./tmp:/app/tmp
+    depends_on:
+      - mosquitto
+    # logging:
+    #   driver: none
+
+  stats_subscriber:
+    build: .
+    container_name: stats_subscriber
+    command: ./venv/bin/python -u stats_pubsub.py
+    volumes:
+      - ./tmp:/app/tmp
+    depends_on:
+      - subscriber
+
+  publisher:
+    build: .
+    container_name: publisher
+    command: ./venv/bin/python -u publish.py
+    volumes:
+      - ./tmp:/app/tmp
+    depends_on:
+      - mosquitto
+      - subscriber
+      - stats_subscriber
