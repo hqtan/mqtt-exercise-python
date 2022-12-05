@@ -9,24 +9,31 @@ from os import getenv
 load_dotenv()
 DB_FILE = getenv("DB_FILE") or "tmp/test.db"
 
+
 def create_connection(db_file=DB_FILE) -> Optional[sqlite3.Connection]:
-    """ create a database connection to a SQLite database """
+    """create a database connection to a SQLite database"""
 
     conn = None
     try:
-            conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file)
     except Exception as e:
-            print(e)
+        print(e)
     return conn
 
+
 def setup_db() -> None:
-    """ create tables in the database """
+    """create tables in the database"""
     conn: Optional[sqlite3.Connection] = create_connection()
     if conn is not None:
         with closing(conn) as con:
             with closing(con.cursor()) as cur:
-                cur.execute('''CREATE TABLE IF NOT EXISTS messages (number INTEGER, epochtime INTEGER)''')
+                cur.execute(
+                    """CREATE TABLE IF NOT EXISTS messages (
+                        number INTEGER, epochtime INTEGER
+                    )"""
+                )
                 con.commit()
+
 
 def run_db_operation_decorator(func):
     @functools.wraps(func)
@@ -41,13 +48,16 @@ def run_db_operation_decorator(func):
                     cur.execute(sql, values)
                     con.commit()
         return None
+
     return wrapper_decorator
+
 
 @run_db_operation_decorator
 def insert_message(values: tuple[int, int]) -> tuple[str, tuple]:
-    """ insert a new message into the messages table """
-    sql = '''INSERT INTO messages(number, epochtime) VALUES(?,?)'''
+    """insert a new message into the messages table"""
+    sql = """INSERT INTO messages(number, epochtime) VALUES(?,?)"""
     return (sql, values)
+
 
 def run_db_query_decorator(func):
     @functools.wraps(func)
@@ -61,40 +71,46 @@ def run_db_query_decorator(func):
                     cur.execute(sql)
                     results = cur.fetchall()
         return results
+
     return wrapper_decorator
+
 
 @run_db_query_decorator
 def get_averages() -> str:
-    """ get average of all numbers in messages table """
-    sql = '''
+    """get average of all numbers in messages table"""
+    sql = """
     WITH current_time as (
         SELECT MAX(epochtime) as curr_epoch from messages m
     ),
     one_minute as (
         select
-            AVG("number") as avg_1m 
+            AVG("number") as avg_1m
         FROM messages, current_time
         WHERE curr_epoch - epochtime <= 60
     ),
     five_minute as (
         select
-            AVG("number") as avg_5m 
+            AVG("number") as avg_5m
         FROM messages, current_time
         WHERE curr_epoch - epochtime <= 60*5
     ),
     thirty_minute as (
         select
-            AVG("number") as avg_30m 
+            AVG("number") as avg_30m
         FROM messages, current_time
         WHERE curr_epoch - epochtime <= 60*30
     )
     SELECT * FROM one_minute, five_minute, thirty_minute
-    '''
+    """
     return sql
 
+
 @run_db_operation_decorator
-def delete_old_messages(current_epoch: int = int(dt.datetime.now().strftime('%s')), expire_in_minutes: int = 35) -> tuple[str, tuple[int, int]]:
-    sql = '''DELETE FROM messages WHERE ? - epochtime > 60*?'''
+def delete_old_messages(
+    current_epoch: int = int(dt.datetime.now().strftime("%s")),
+    expire_in_minutes: int = 35,
+) -> tuple[str, tuple[int, int]]:
+    sql = """DELETE FROM messages WHERE ? - epochtime > 60*?"""
     return (sql, (current_epoch, expire_in_minutes))
 
 
@@ -103,7 +119,7 @@ if __name__ == "__main__":
 
     @run_db_query_decorator
     def query_db() -> str:
-        return f"SELECT * FROM messages"
+        return "SELECT * FROM messages"
 
     # delete_old_messages()
     print(query_db())
