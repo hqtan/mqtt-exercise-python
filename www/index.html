@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MQTT coding exercise</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
+</head>
+<body>
+  Use WebSocket client to connect to MQTT server
+  <div id="dashboard"></div>
+  <div id="pix_dashboard"></div>
+</body>
+<script>
+const clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
+
+const host = 'ws://localhost:9001'
+
+const options = {
+  keepalive: 30,
+  clientId: clientId,
+  protocolId: 'MQTT',
+  protocolVersion: 4,
+  clean: true,
+  reconnectPeriod: 1000,
+  connectTimeout: 30 * 1000,
+  will: {
+    topic: 'WillMsg',
+    payload: 'Connection Closed abnormally..!',
+    qos: 0,
+    retain: false
+  },
+  rejectUnauthorized: false
+}
+
+console.log('connecting mqtt client')
+const client = mqtt.connect(host, options)
+
+client.on('error', (err) => {
+  console.log('Connection error: ', err)
+  client.end()
+})
+
+client.on('reconnect', () => {
+  console.log('Reconnecting...')
+})
+
+client.on('connect', () => {
+  console.log('Client connected:' + clientId)
+  client.subscribe('DATA', { qos: 1 })
+
+  // add svg to dashboard
+  var draw = SVG().addTo('#pix_dashboard').size(300, 300)
+  var rect = draw.rect(100, 100).attr({ fill: '#f06', opacity: 0 }).transform({ rotate: 180 })
+})
+
+client.on('message', (topic, message, packet) => {
+  console.log('Received Message: ' + message.toString() + '\nOn topic: ' + topic)
+  const dashboard = document.getElementById('dashboard');
+
+  let msgContainer = document.createElement("div");
+
+  let elem = document.getElementById("message");
+  if (elem != null) elem.remove();
+
+  msgContainer.id = "message"
+  msgContainer.innerHTML = message.toString();
+  // parse message from topic
+  let obj = JSON.parse(message.toString());
+
+  // add the new div to dashboard
+  dashboard.appendChild(msgContainer);
+
+  // update svg rectangle
+  var rect = SVG('rect');
+  rect.attr({ fill: '#f06', opacity: 1 }).animate().size(100,obj.number)
+})
+
+client.on('close', () => {
+  console.log(clientId + ' disconnected')
+})
+</script>
+</html>

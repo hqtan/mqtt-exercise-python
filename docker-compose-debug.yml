@@ -2,9 +2,12 @@ services:
   mosquitto:
     container_name: mosquitto
     image: eclipse-mosquitto
-    command: mosquitto -c /mosquitto-no-auth.conf
+    command: mosquitto -c /mosquitto-no-auth-websocket.conf
+    volumes:
+      - ./config/mosquitto-no-auth-websocket.conf:/mosquitto-no-auth-websocket.conf
     ports:
       - "1883:1883"
+      - "9001:9001"
 
   subscriber:
     build: .
@@ -34,3 +37,14 @@ services:
       - mosquitto
       - subscriber
       - stats_subscriber
+
+  web:
+    container_name: web
+    image: nginx
+    volumes:
+      - ./www/index.html:/usr/share/nginx/html/index.html
+    ports:
+      - "80:80"
+    depends_on:
+      - mosquitto
+      - publisher
